@@ -115,7 +115,7 @@ class Game:
     
     def update_board(self, token, new_position):
         self.remove_token(token)
-        token.move(new_position)
+        token.position = new_position
         self.board[new_position] = self.board[new_position] + [token]
     
     def remove_token(self, token):
@@ -129,8 +129,7 @@ class Game:
                 if token != self.p:
                     self.messages += f"There's {token.i_article} {token.name} here!"
             # switch visibility to true for token(s)
-                    token.found()
-            # if basket, has_basket = True
+                    token.visible = True
                 if token.name == "monster":
                     self.die()
                 if token.name == "basket":
@@ -200,15 +199,7 @@ class Token:
         self.name = ''
         self.i_article = "a"
     
-class Findable():
-    def found(self):
-        self.visible = True
-    
-class Movable():        
-    def move(self, position):
-        self.position = position
-    
-class Player(Token,Movable):
+class Player(Token):
     def __init__(self):
         super().__init__()
         self.rep = 'P'
@@ -217,26 +208,26 @@ class Player(Token,Movable):
         self.eggs = 0
         self.visible = True
 
-class Monster(Token,Movable,Findable):
+class Monster(Token):
     def __init__(self):
         super().__init__()
         self.rep = 'M'
         self.name = "monster"
 
-class Egg(Token, Findable):
+class Egg(Token):
     def __init__(self):
         super().__init__()
         self.rep = 'O'
         self.i_article = "an"
         self.name = "egg"
 
-class Basket(Token, Findable):
+class Basket(Token):
     def __init__(self):
         super().__init__()
         self.rep = 'U'
         self.name = "basket"
 
-class Door(Token, Findable):
+class Door(Token):
     def __init__(self):
         super().__init__()
         self.rep = 'D'
