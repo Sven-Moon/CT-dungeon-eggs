@@ -244,13 +244,13 @@ class Door(Token, Findable):
     def collision(self,token,game):
         if token.name == 'player':
             self.found()
-            print('\nYou found a door!')
+            game.messages ='\nYou found a door!'
             if token.eggs == 3:
-                print('\nHorray! You won. You will be forever more known as "3-eggs, the Eggy"!')
+                game.messages +='\nHorray! You won. You will be forever more known as "3-eggs, the Eggy"!'
                 game.display_interface()
                 game.game_end()
             else:
-                print('\n... but you don\'t have all three eggs!')
+                game.messages +='\n... but you don\'t have all three eggs!'
 
 def run():
     new_game = True
