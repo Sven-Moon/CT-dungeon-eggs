@@ -64,13 +64,17 @@ class Game:
         self.board.detect_collisions(self.m, self)
             
     def display_interface(self): 
+        if self.messages:
+            clear()    
+            self.display_items()
+            self.board.draw_map()
+            self.display_messages()
+            self.wait()
+            self.messages = ''        
         clear()    
         self.display_items()
         self.board.draw_map()
         self.display_messages()
-        if self.messages:
-            self.wait()
-        self.messages = ''
             
     def display_items(self):
         print(f"Basket: {'Yes' if self.p.has_basket else 'No'}", end = "   ")
