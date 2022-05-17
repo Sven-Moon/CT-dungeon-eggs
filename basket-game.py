@@ -3,22 +3,23 @@ from time import sleep
 import os
 clear = lambda: os.system('cls')
 
-CELLS = [
-    (0,0),(1,0),(2,0),(3,0),(4,0),
-    (0,1),(1,1),(2,1),(3,1),(4,1),
-    (0,2),(1,2),(2,2),(3,2),(4,2),
-    (0,3),(1,3),(2,3),(3,3),(4,3),
-    (0,4),(1,4),(2,4),(3,4),(4,4),
-  ]
+# CELLS = [
+#     (0,0),(1,0),(2,0),(3,0),(4,0),
+#     (0,1),(1,1),(2,1),(3,1),(4,1),
+#     (0,2),(1,2),(2,2),(3,2),(4,2),
+#     (0,3),(1,3),(2,3),(3,3),(4,3),
+#     (0,4),(1,4),(2,4),(3,4),(4,4),
+#   ]
 
 MOVES = {"q": (-1,-1), "w": (0, -1), "e": (1, -1),
         "a": (-1, 0), "d": (1,0),
         "z": (-1,1), "x": (0,1), "c": (1,1)}
 
-MOVE_INPUT = {"q","w","e","a","d","z","x","c"}
-
 class Game:
-    def __init__(self):
+    def __init__(self, board_size = 5):
+        self.game_over = False
+        self.play_again = 'y'
+        self.messages = ''   
         self.p = Player()
         self.e1 = Egg()
         self.e2 = Egg()
@@ -27,11 +28,8 @@ class Game:
         self.d = Door()
         self.b = Basket()        
         self.tokens = [self.e1 , self.e2 , self.e3 , self.p , self.m, self.d, self.b]
-        self.board = Board(5)
+        self.board = Board(board_size)
         self.assign_token_spaces()
-        self.game_over = False
-        self.play_again = 'y'
-        self.messages = ''   
                                 
     def assign_token_spaces(self):
         for token in self.tokens:
@@ -45,14 +43,13 @@ class Game:
             print("[a]     [d]  =  \u2190   \u2192")
             print("[z] [x] [c]     \u2199 \u2193 \u2198")         
             move = input("\nChoose where to move: ").lower()
-            if move not in MOVE_INPUT:
-                print("I didn't recognize that as a direction.")
-                sleep(2)
+            if move not in MOVES:
+                self.messages = "\nI didn't recognize that as a direction."
                 continue
             move = MOVES[move]
             
-            if move not in self.p.valid_moves():
-                self.messages = "\nYou can't move there because you don't have the power to pass through walls. \nAnd also, where would you be if not in this beautiful dungeon?\n"
+            if move not in self.p.valid_moves(self.board.size):
+                self.messages = "You can't move there because you don't have the power to pass through walls. \nAnd also, where would you be if not in this beautiful dungeon?\n"
                 continue
             else:
                 self.board.update_token_position(self.p, move)
@@ -65,7 +62,7 @@ class Game:
             
     def display_interface(self): 
         if self.messages:
-            clear()    
+            clear()
             self.display_items()
             self.board.draw_map()
             self.display_messages()
@@ -81,7 +78,7 @@ class Game:
         print(f"Eggs: {self.p.eggs}")
     
     def display_messages(self):
-        if self.messages != '':
+        if self.messages:
             print()
             print(self.messages)
                             
@@ -102,31 +99,18 @@ class Game:
 class Board:
     def __init__(self, size) -> None:
         self.size = size
-        self.cells = self.create_cells(size)
+        self.cell_arr = self.create_cell_arr()
+        self.cells = self.create_cells()
         self.occupied_cells = set()
         self.unoccupied_cells = set(self.cells)
         
-    def draw_map(self):
-        print("|"+"-"*(self.size*4-1)+"|", end = "")
-        separator = "\n|"+"- -|"*self.size
-        rows = []
-        for row in range(self.size):
-            
-            rows.append("\n|"+ " ".join( [self.get_space(cell) for cell in [
-                CELLS[i] for i in range(row*self.size,(row+1)*self.size)
-                ]]) +"|")
-            
-        print(separator.join(rows))
-        print("|"+"-"*(self.size*4-1)+"|")
-    
-    def get_space(self, cell):
-        if len(self.cells[cell]) == 2:
-            return " ".join([token.rep for token in list(self.cells[cell]) if token.visible]).center(3, " ")
-        else:
-            return "".join([token.rep for token in list(self.cells[cell]) if token.visible]).center(3, " ")
-
-    def create_cells(self,size):
-        return {(x,y):set() for x in range(size) for y in range(size)}
+    def create_cells(self):
+        return {cell: set() for cell in self.cell_arr}
+        
+    def create_cell_arr(self):
+        return [(x,y)
+                for y in range(self.size) 
+                for x in range(self.size)]
     
     def assign_unoccupied_cell(self, token):
         cell = random.choice(list(self.unoccupied_cells))
@@ -134,6 +118,27 @@ class Board:
         self.unoccupied_cells.remove(cell)
         self.place_token(token, cell)
         
+    def draw_map(self):
+        separator = "\n|"+"- -|"*self.size
+        rows = []
+        for row in range(self.size):
+            
+            rows.append("\n|"+ 
+                        " ".join( [self.get_space(cell) 
+                                   for cell in [
+                self.cell_arr[i] for i in range(row*self.size,(row+1)*self.size)
+                ]]) +"|")
+            
+        print("|"+"-"*(self.size*4-1)+"|", end = "")            
+        print(separator.join(rows))
+        print("|"+"-"*(self.size*4-1)+"|")
+    
+    def get_space(self, cell):
+        if len(self.cells[cell]) == 2:
+            return " ".join([token.rep for token in self.cells[cell] if token.visible]).center(3)
+        else:
+            return "".join([token.rep for token in self.cells[cell] if token.visible]).center(3)
+
     def update_token_position(self, token, move):
         """ removes token from old position and adds it to new position (on board)
         also updates position attribute of token"""
@@ -145,7 +150,7 @@ class Board:
         """resets messages since all messages rendered after collision"""
         self.messages = ''
         if len(self.cells[token.position]) > 1:
-            other_tokens = list(self.cells[token.position] - {token})
+            other_tokens = self.cells[token.position] - {token}
             # for all tokens 
             for other_token in other_tokens:
             # call collision method - 
@@ -165,22 +170,29 @@ class Token:
         self.name = ''
         self.i_article = "a"
         
-    def place(self, position):
-        self.position = position
+    def place(self, cell):
+        self.position = cell
 
 class Movable():
-    possible_moves = [(x,y) for x in range(-1,2) for y in range(-1,2)]
+    possible_moves = [(x,y) for x in range(-1,2) for y in range(-1,2) if not (x == 0 and y == 0)]
     def __init__(self, position):
         self.position = position
     
-    def valid_moves(self):
+    def valid_moves(self, board_size):
         """returns list of valid moves (-1,0), etc"""
         valid_moves = set()
         for (x,y) in self.possible_moves:
-            if 0 <=x + self.position[0] < 5 and 0 <= y + self.position[1] < 5:
+            if 0 <=x + self.position[0] < board_size \
+            and 0 <= y + self.position[1] < board_size:
                 valid_moves.add((x,y))
         return valid_moves
     
+class Findable():
+    def __init__(self) -> None:        
+        self.visible = False
+    def found(self):
+        self.visible = True
+
 class Player(Token, Movable):
     def __init__(self):
         super().__init__()
@@ -188,12 +200,6 @@ class Player(Token, Movable):
         self.name = "player"
         self.has_basket = False
         self.eggs = 0
-        self.visible = True
-        
-class Findable():
-    def __init__(self) -> None:        
-        self.visible = False
-    def found(self):
         self.visible = True
 
 class Monster(Token, Movable, Findable):
@@ -216,16 +222,22 @@ class Egg(Token, Findable):
         self.name = "egg"
     def collision(self, token, game):
         if token.name == 'player':
-            self.found()
-            game.messages += '\nYou found an egg!'
-            if token.has_basket:
-                game.messages += '\n... and you put it in your basket!'
+            if not self.visible:
+                self.found()
+                game.messages += 'You found an egg!'
+                if token.has_basket:
+                    game.messages += '\n\n... and you put it in your basket!'
+                    game.display_interface()
+                    game.board.remove_token(self)
+                    token.eggs += 1
+                else:
+                    game.messages += '\n\n... but you don\'t have a basket!'
+                    game.display_interface()
+            else:
+                game.messages += 'You put an egg in your basket!'
                 game.display_interface()
                 game.board.remove_token(self)
                 token.eggs += 1
-            else:
-                game.messages += '\n... but you don\'t have a basket!'
-                game.display_interface()
                 
 class Basket(Token, Findable):
     def __init__(self):
@@ -235,7 +247,7 @@ class Basket(Token, Findable):
     def collision(self, token,game):
         if token.name == 'player':
             self.found()
-            game.messages += '\nYou found a basket!'
+            game.messages += 'You found a basket!'
             game.display_interface()
             token.has_basket = True
             game.board.remove_token(self)
@@ -247,26 +259,32 @@ class Door(Token, Findable):
         self.name = "door"
     def collision(self,token,game):
         if token.name == 'player':
+            if not self.visible:
+                game.messages ='You found a door!'
             self.found()
-            game.messages ='\nYou found a door!'
             if token.eggs == 3:
-                game.messages +='\nHorray! You won. You will be forever more known as "3-eggs, the Eggy"!'
+                game.messages +='Horray! You won. You will be forever more known as "3-eggs, the Eggy"!'
                 game.display_interface()
                 game.game_end()
             else:
-                game.messages +='\n... but you don\'t have all three eggs!'
+                game.messages +='\n\n... but you don\'t have all three eggs!'
 
 def run():
     new_game = True
     while new_game or game.play_again == 'y':
-        game = Game()
+        while True:
+            size = input('What size board would you like to play on? (3-9) ')
+            if size in ['3','4','5','6','7','8','9']:
+                size = int(size)
+                break
+        game = Game(size)
         new_game = False
         while True:
             game.player_move()
             if game.game_over:
-                break   
+                break
             game.monster_move()
             if game.game_over:
-                break  
+                break
 
 run()
